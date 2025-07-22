@@ -18,7 +18,7 @@ declare type ParsedPrimitive = {type?: Function; value: any; name?: string; deli
 declare type ParsedURL = {protocol?: string; auth?: string; username?: string; password?: string; hostname?: string; port?: number; pathname?: string; filename?: string; query?: string; fragment?: string};
 declare type RGBColour = [number, number, number];
 declare type ShellEscapeOptions = {isPath?: boolean; newlines?: NewlineEscapeStrategy; nullBytes?: NullByteEscapeStrategy; quoted?: boolean};
-declare type Token = {number: number; offset: number; text: string | Uint8Array};
+declare type Token = {interrupted?: boolean; last?: boolean; number: number; offset: number; text: string | Uint8Array};
 declare type WSFrame = {isFinal: boolean; isRSV1: boolean; isRSV2: boolean; isRSV3: boolean; length: bigint; mask?: number; opcode: number; opname: string; payload: Bytes; trailer: Bytes};
 export declare const BlendModes:{[key: string]: (...args: number[]) => number};
 export declare function New(type: string, attr?: object): Element;

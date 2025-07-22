@@ -2455,9 +2455,11 @@ describe("Text-related functions", () => {
 			assertGenerator(input);
 			expect(input.next()).to.eql({done: true, value: undefined});
 		};
-		const testToken = (input, text, number, offset) => {
+		const testToken = (input, text, number, offset, last = null, interrupted = null) => {
 			assertGenerator(input);
-			expect(input.next()).to.eql({done: false, value: {number, offset, text}});
+			const token = input.next();
+			({last, interrupted} = null === last ? token.value : {last, interrupted: interrupted ?? false});
+			expect(token).to.eql({done: false, value: {last, interrupted, number, offset, text}});
 		};
 
 		describe("Signature", () => {
@@ -2473,12 +2475,33 @@ describe("Text-related functions", () => {
 				testToken(result, "name", 0, 0);
 				assertDone(result);
 			});
-			it("yields stringifiable tokens", () => {
-				const result = strtok("name");
-				const token  = result.next();
-				expect(token).to.eql({done: false, value: {number: 0, offset: 0, text: "name"}});
-				expect(token.value).to.have.own.property("toString").that.is.a("function");
-				expect(token.value.toString()).to.equal("name");
+			
+			describe("Stringification", () => {
+				it("yields stringifiable tokens", () => {
+					const {value: token}  = strtok("foo").next();
+					expect(token).to.include({number: 0, offset: 0, text: "foo"});
+					expect(token).to.have.own.property("toString").that.is.a("function");
+					expect(token).to.have.own.property("length").that.is.a("number");
+					expect(token.toString()).to.equal("foo");
+					expect(token).to.have.lengthOf(3);
+				});
+				it("reflects modifications to `.text` properties", () => {
+					const {value: token} = strtok("Foo").next();
+					expect(token.toString()).to.equal("Foo");
+					expect(token).to.have.lengthOf(3);
+					token.text += "BarBaz";
+					expect(token.toString()).to.equal("FooBarBaz");
+					expect(token).to.have.lengthOf(9);
+					token.text = "";
+					expect(token.toString()).to.equal("");
+					expect(token).to.have.lengthOf(0);
+				});
+				it("retains meaningful data when converted to JSON", () => {
+					const {value: token} = strtok("foo").next();
+					const fields = {number: 0, offset: 0, text: "foo"};
+					expect(token).to.include(fields);
+					expect(JSON.parse(JSON.stringify(token))).to.be.an("object").that.includes(fields);
+				});
 			});
 			
 			describe("Delimiters", () => {
@@ -2514,6 +2537,37 @@ describe("Text-related functions", () => {
 					testToken(result, "radius:", 0, 0);
 					testToken(result, "colour:", 1, 7);
 					testToken(result, "id",      2, 14);
+					assertDone(result);
+				});
+			});
+			
+			describe("Terminal tokens", () => {
+				it("flags the last token in a stream", () => {
+					const input = "Foo\r\nBar\r\nBaz\r\n";
+					const crlf = "\r\n";
+					let result = strtok(input, crlf);
+					testToken(result, "Foo", 0, 0,  false);
+					testToken(result, "Bar", 1, 5,  false);
+					testToken(result, "Baz", 2, 10, true);
+					assertDone(result);
+					result = strtok(input, crlf, true);
+					testToken(result, "Foo\r\n", 0, 0,  false);
+					testToken(result, "Bar\r\n", 1, 5,  false);
+					testToken(result, "Baz\r\n", 2, 10, true);
+					assertDone(result);
+				});
+				it("flags terminal tokens that aren't followed by separators", () => {
+					const input = "Edited\r\non\r\nWindows";
+					const crlf = "\r\n";
+					let result = strtok(input, crlf);
+					testToken(result, "Edited",  0, 0,  false, false);
+					testToken(result, "on",      1, 8,  false, false);
+					testToken(result, "Windows", 2, 12, true,  true);
+					assertDone(result);
+					result = strtok(input, crlf, true);
+					testToken(result, "Edited\r\n", 0, 0,  false, false);
+					testToken(result, "on\r\n",     1, 8,  false, false);
+					testToken(result, "Windows",    2, 12, true,  true);
 					assertDone(result);
 				});
 			});
@@ -2581,6 +2635,7 @@ describe("Text-related functions", () => {
 				let calls = 0;
 				result = strtok({toString: () => (++calls, iniData)}, "\r\n");
 				testToken(result, "[root]",   0, 0);
+				expect(calls).to.equal(1);
 				testToken(result, "OS=Win32", 1, 8);
 				assertDone(result);
 				expect(calls).to.equal(1);
@@ -2590,7 +2645,8 @@ describe("Text-related functions", () => {
 				const delimiter = {toString: () => (++calls, eol)};
 				const result = strtok(iniData, delimiter);
 				testToken(result, "[root]", 0, 0);
-				eol = "\n";
+				expect(calls).to.equal(1);
+				eol = "\x1A";
 				testToken(result, "OS=Win32", 1, 8);
 				assertDone(result);
 				expect(calls).to.equal(1);
