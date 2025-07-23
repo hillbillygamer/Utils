@@ -70,65 +70,78 @@ describe("Miscellaneous functions", () => {
 		});
 	});
 	
-	describe("findSequence()", () => {
-		const {findSequence} = utils;
+	describe("findSeq()", () => {
+		const {findSeq} = utils;
 		it("locates sequences containing numbers", () => {
-			expect(findSequence([0, 1, 2], [0]))   .to.equal(0);
-			expect(findSequence([256, -1], [-1]))  .to.equal(1);
-			expect(findSequence([-1, 2.5], [2.5])) .to.equal(1);
-			expect(findSequence([1, 2, 3], [2, 3])).to.equal(1);
+			expect(findSeq([0, 1, 2], [0]))   .to.equal(0);
+			expect(findSeq([256, -1], [-1]))  .to.equal(1);
+			expect(findSeq([-1, 2.5], [2.5])) .to.equal(1);
+			expect(findSeq([1, 2, 3], [2, 3])).to.equal(1);
 		});
 		it("returns -1 if nothing was matched", () => {
-			expect(findSequence([],        [1, 2])).to.equal(-1);
-			expect(findSequence([1, 2, 3], ["No"])).to.equal(-1);
-			expect(findSequence([1, 2, 3], []))    .to.equal(-1);
+			expect(findSeq([],        [1, 2])).to.equal(-1);
+			expect(findSeq([1, 2, 3], ["No"])).to.equal(-1);
+			expect(findSeq([1, 2, 3], []))    .to.equal(-1);
 		});
 		it("begins searches from arbitrary offsets", () => {
-			expect(findSequence([1, 2, 0, 1, 2], [1, 2], 1))  .to.equal(3);
-			expect(findSequence([1, 2, 3, 1, 2], [1, 2], -3)) .to.equal(3);
+			expect(findSeq([1, 2, 0, 1, 2], [1, 2], 1))  .to.equal(3);
+			expect(findSeq([1, 2, 3, 1, 2], [1, 2], -3)) .to.equal(3);
 		});
 		it("measures negative offsets relative to end-of-input", () => {
 			const input = [1, 2, 0, 1, 2, 3];
-			expect(findSequence(input, [1, 2], -3)).to.equal(3);
-			expect(findSequence(input, [1, 2], -2)).to.equal(-1);
-			expect(findSequence(input, [1, 2], -1)).to.equal(-1);
-			expect(findSequence(input, [1, 2],  0)).to.equal(0);
+			expect(findSeq(input, [1, 2], -3)).to.equal(3);
+			expect(findSeq(input, [1, 2], -2)).to.equal(-1);
+			expect(findSeq(input, [1, 2], -1)).to.equal(-1);
+			expect(findSeq(input, [1, 2],  0)).to.equal(0);
 		});
 		it("uses strict type-checking", () => {
-			expect(findSequence([1, "1"],  ["1"])).to.equal(1);
-			expect(findSequence(["1"],       [1])).to.equal(-1);
-			expect(findSequence([null],  [false])).to.equal(-1);
-			expect(findSequence([, , ], [void 0])).to.equal(0);
-			expect(findSequence([1n, 0, 1],  [1])).to.equal(2);
+			expect(findSeq([1, "1"],  ["1"])).to.equal(1);
+			expect(findSeq(["1"],       [1])).to.equal(-1);
+			expect(findSeq([null],  [false])).to.equal(-1);
+			expect(findSeq([void 0, ,], [,])).to.equal(0);
+			expect(findSeq([1n, 0, 1],  [1])).to.equal(2);
 		});
 		it("matches sequences that contain NaN", () => {
 			const input = [1, NaN, 2, NaN, NaN];
-			expect(findSequence(input,      [NaN])).to.equal(1);
-			expect(findSequence(input,   [1, NaN])).to.equal(0);
-			expect(findSequence(input, [NaN, NaN])).to.equal(3);
-			expect(findSequence(input,   [NaN, 0])).to.equal(-1);
-			expect(findSequence([0, NaN],   [NaN])).to.equal(1);
+			expect(findSeq(input,      [NaN])).to.equal(1);
+			expect(findSeq(input,   [1, NaN])).to.equal(0);
+			expect(findSeq(input, [NaN, NaN])).to.equal(3);
+			expect(findSeq(input,   [NaN, 0])).to.equal(-1);
+			expect(findSeq([0, NaN],   [NaN])).to.equal(1);
 		});
 		it("matches objects by reference", () => {
 			const a = {}, b = {};
-			expect(findSequence([a, a, b],    [b]))   .to.equal(2);
-			expect(findSequence([a, a, b, b], [a, b])).to.equal(1);
-			expect(findSequence([a, {}],      [a, b])).to.equal(-1);
+			expect(findSeq([a, a, b],    [b]))   .to.equal(2);
+			expect(findSeq([a, a, b, b], [a, b])).to.equal(1);
+			expect(findSeq([a, {}],      [a, b])).to.equal(-1);
 		});
-		it("distinguishes signed and unsigned zeroes", () => {
-			expect(findSequence([false, -0, 0],  [0])).to.equal(2);
-			expect(findSequence([false, -0, 0], [-0])).to.equal(1);
-			expect(findSequence([-0, 0, -0, 0], [-0, 0])).to.equal(0);
-			expect(findSequence([-0, 0, -0, 0], [-0, 0], 1)).to.equal(2);
-			expect(findSequence([-0, 0, -0, 0], [0, -0], 1)).to.equal(1);
+		it("matches values using custom comparators", () => {
+			const {is} = Object;
+			expect(findSeq([false, -0, 0], [0],     0, is)).to.equal(2);
+			expect(findSeq([false, -0, 0], [-0],    0, is)).to.equal(1);
+			expect(findSeq([-0, 0, -0, 0], [-0, 0], 0, is)).to.equal(0);
+			expect(findSeq([-0, 0, -0, 0], [-0, 0], 1, is)).to.equal(2);
+			expect(findSeq([-0, 0, -0, 0], [0, -0], 1, is)).to.equal(1);
+		});
+		it("works with strings", () => {
+			const input = "ABC…XYZ";
+			expect(findSeq(input, ["B", "C"])).to.equal(1);
+			expect(findSeq(input, ["C", "…"])).to.equal(2);
+			expect(findSeq(input, "BC"))      .to.equal(1);
+			expect(findSeq(input, "C…X"))     .to.equal(2);
 		});
 		it("works with typed arrays", () => {
 			const bytes = new Uint8Array([1, 2, 3, 0, 1, 2, 3]);
-			expect(findSequence(bytes, [2, 3]))   .to.equal(1);
-			expect(findSequence(bytes, [2, 3], 2)).to.equal(5);
-			expect(findSequence(bytes, [3, 1], 2)).to.equal(-1);
-			expect(findSequence(bytes, bytes))    .to.equal(0);
-			expect(findSequence(bytes, bytes, 1)) .to.equal(-1);
+			expect(findSeq(bytes, [2, 3]))   .to.equal(1);
+			expect(findSeq(bytes, [2, 3], 2)).to.equal(5);
+			expect(findSeq(bytes, [3, 1], 2)).to.equal(-1);
+			expect(findSeq(bytes, bytes))    .to.equal(0);
+			expect(findSeq(bytes, bytes, 1)) .to.equal(-1);
+		});
+		it("requires finite offsets", () => {
+			expect(() => findSeq([1], [1], NaN))      .to.throw(RangeError);
+			expect(() => findSeq([1], [1], Infinity)) .to.throw(RangeError);
+			expect(() => findSeq([1], [1], -Infinity)).to.throw(RangeError);
 		});
 	});
 	

@@ -6,6 +6,7 @@ declare type Bytes = number[] | Uint8Array | Uint8ClampedArray;
 declare type CMYColour = [number, number, number];
 declare type CMYKColour = [number, number, number, number];
 declare type CommandList = Array<(string|Array<string>)>;
+declare type Comparator = (a: any, b: any) => boolean;
 declare type DrawTextResult = {x: number; y: number; remainder: string[]};
 declare type ExecOptions = string | {cwd?: string; encoding?: string[] | string; env?: object; outputPath?: string};
 declare type ExecResult = {code?: number; stdout?: string; stderr?: string};
@@ -76,7 +77,7 @@ export declare function expandEscapes(input: string, all?: boolean, ignoreUnknow
 export declare function extractTableData(table: HTMLTableElement): object[];
 export declare function findBasePath(paths: string[]): string;
 export declare function findPrefix(strings: string[]): string;
-export declare function findSequence(input: any[] | TypedArray, seq: any[] | TypedArray, startIndex?: number): number;
+export declare function findSeq(haystack: any[] | TypedArray | string, needle: any[] | TypedArray | string, offset?: number, cmp?: Comparator): number;
 export declare function formatBytes(bytes: number): string;
 export declare function formatTime(input: number): string;
 export declare function getCanvasFont(context: CanvasRenderingContext2D): FontStyle;
